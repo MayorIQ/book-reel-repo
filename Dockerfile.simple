@@ -1,0 +1,54 @@
+# ============================================================================
+# BookReel - Simplified Dockerfile
+# ============================================================================
+# Use this if the multi-stage build has issues
+# This is a single-stage build that's easier to debug
+
+FROM node:18-alpine
+
+# Install system dependencies including FFmpeg and OpenSSL
+RUN apk add --no-cache \
+    libc6-compat \
+    ffmpeg \
+    openssl
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install ALL dependencies (including dev dependencies for build)
+RUN npm install
+
+# Copy application source
+COPY . .
+
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Set dummy DATABASE_URL for Prisma generation (required at build time)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Set build environment
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
+# Build Next.js application
+RUN npm run build
+
+# Create directories for runtime
+RUN mkdir -p /app/public/videos /app/tmp
+
+# Expose port
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the application
+CMD ["npm", "start"]
+

@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id               Int      @id @default(autoincrement())
+  book_title       String   @unique
+  author           String
+  popularity_score Int      @default(0)
+  genre            String   @default("Fiction")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model GoogleBooksCache {
+  id        Int      @id @default(autoincrement())
+  title     String
+  author    String
+  data      Json
+  cached_at DateTime @default(now())
+
+  @@unique([title, author])
+}
+
