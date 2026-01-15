@@ -7,10 +7,14 @@
 # ============================================================================
 # Stage 1: Dependencies (Production Only)
 # ============================================================================
-FROM node:18-alpine AS deps
+FROM node:18-slim AS deps
 
 # Install system dependencies including FFmpeg
-RUN apk add --no-cache libc6-compat ffmpeg
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -23,10 +27,14 @@ RUN npm ci --only=production
 # ============================================================================
 # Stage 2: Builder
 # ============================================================================
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 
-# Install FFmpeg and other build dependencies
-RUN apk add --no-cache ffmpeg openssl libc6-compat
+# Install FFmpeg, OpenSSL, and other build dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -64,10 +72,14 @@ RUN echo "Starting Next.js build..." && \
 # ============================================================================
 # Stage 3: Runner (Production)
 # ============================================================================
-FROM node:18-alpine AS runner
+FROM node:18-slim AS runner
 
-# Install FFmpeg in production stage (required for video generation)
-RUN apk add --no-cache ffmpeg
+# Install FFmpeg and OpenSSL (required for Prisma and video generation)
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -76,8 +88,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 --gid nodejs nextjs
 
 # Copy necessary files from builder
 COPY --from=builder /app/public ./public
